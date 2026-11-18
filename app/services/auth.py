@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -21,34 +22,53 @@ class InvalidCredentials(Exception):
     pass
 
 
-def register_user(session: Session, email: str, password: str) -> User:
+def register_user(
+    session: Session,
+    name: str,
+    email: str,
+    password: str
+) -> User:
     users = UserRepository(session)
-    if users.get_by_email(email) is not None:
-        raise EmailAlreadyRegistered
 
-    user = User(email=email, hashed_password=password_hash.hash(password))
+    if users.get_by_email(email) is not None:
+        raise EmailAlreadyRegistered()
+
+    user = User(
+        name=name,
+        email=email,
+        hashed_password=password_hash.hash(password)
+    )
+
     session.add(user)
+
     try:
         session.commit()
     except IntegrityError as error:
         session.rollback()
-        raise EmailAlreadyRegistered from error
+        raise EmailAlreadyRegistered() from error
+
     session.refresh(user)
     return user
 
 
-def authenticate_user(session: Session, email: str, password: str) -> str:
+def authenticate_user(
+    session: Session,
+    email: str,
+    password: str
+) -> str:
     user = UserRepository(session).get_by_email(email)
+
     if (
         user is None
         or not password_hash.verify(password, user.hashed_password)
         or not user.is_active
     ):
-        raise InvalidCredentials
+        raise InvalidCredentials()
 
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
+
     return jwt.encode(
         {"sub": str(user.id), "exp": expires_at},
         settings.secret_key.get_secret_value(),
@@ -62,4 +82,5 @@ def decode_access_token(token: str) -> UUID:
         settings.secret_key.get_secret_value(),
         algorithms=["HS256"],
     )
+
     return UUID(payload["sub"])

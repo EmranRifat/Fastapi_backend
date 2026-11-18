@@ -1,28 +1,51 @@
 from datetime import datetime
-from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
-class Credentials(BaseModel):
+class RegisterCredentials(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=8)
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.lower()
+
 
 
 class UserRead(BaseModel):
-    id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
     email: EmailStr
     is_active: bool
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+
+class RegisterResponse(BaseModel):
+    message: str
+    user: UserRead
 
 
 class AccessToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+
+class LoginCredentials(BaseModel):
+    email: EmailStr
+    password: str
+    
+from pydantic import BaseModel
+
+
+class LoginData(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    data: LoginData
